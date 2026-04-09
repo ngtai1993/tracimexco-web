@@ -8,6 +8,7 @@ urlpatterns = [
     path("api/health/", include("apps.core.urls", namespace="core")),
     path("api/v1/auth/", include("apps.authentication.urls", namespace="authentication")),
     path("api/v1/users/", include("apps.users.urls", namespace="users")),
+    path("api/v1/agents/", include("apps.agents.urls", namespace="agents")),
 ]
 
 if settings.DEBUG:

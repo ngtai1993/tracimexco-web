@@ -30,6 +30,7 @@ LOCAL_APPS = [
     "apps.users.apps.UsersConfig",
     "apps.authentication.apps.AuthenticationConfig",
     "apps.core.apps.CoreConfig",
+    "apps.agents.apps.AgentsConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -117,6 +118,10 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Agents — Fernet encryption key cho API keys
+# Tạo key: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+AGENT_ENCRYPTION_KEY = config("AGENT_ENCRYPTION_KEY", default="")
 
 # --- DRF ---
 REST_FRAMEWORK = {

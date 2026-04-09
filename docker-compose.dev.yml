@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
 
   db:
@@ -22,12 +20,20 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   web:
     build:
       context: ./backend
       dockerfile: Dockerfile.dev
-    command: python manage.py runserver 0.0.0.0:8000
+    # Chạy migrate trước khi start server — đảm bảo DB luôn up-to-date trên máy mới
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./backend:/app
     ports:
@@ -38,11 +44,14 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=dev-secret-key-not-for-production
       - DEBUG=True
+      # Fernet key dùng cho dev — KHÔNG dùng cho production
+      # Tạo key production: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      - AGENT_ENCRYPTION_KEY=ZGV2LWFnZW50cy1rZXktb25seS1mb3ItZGV2bW9kZSE=
     depends_on:
       db:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy
 
   celery:
     build:
@@ -57,10 +66,13 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - SECRET_KEY=dev-secret-key-not-for-production
       - DEBUG=True
+      - AGENT_ENCRYPTION_KEY=ZGV2LWFnZW50cy1rZXktb25seS1mb3ItZGV2bW9kZSE=
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      web:
         condition: service_started
 
 volumes:
