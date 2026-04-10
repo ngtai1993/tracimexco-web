@@ -1,0 +1,165 @@
+@import "tailwindcss";
+
+/* =====================================================
+   Dark mode via [data-theme] attribute on <html>
+   ===================================================== */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* =====================================================
+   @theme — Tailwind token names (reference CSS vars)
+   Appearance API (<style> in layout) overrides :root vars at runtime
+   ===================================================== */
+@theme inline {
+  /* Fonts */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-var), ui-monospace, monospace;
+
+  /* Border radius */
+  --radius-bento: 1.25rem;
+
+  /* Map Tailwind tokens → CSS vars (set in :root / [data-theme="dark"] below) */
+  --color-primary:       var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-primary-light: var(--color-primary-light);
+  --color-primary-fg:    var(--color-primary-fg);
+  --color-secondary:     var(--color-secondary);
+  --color-accent:        var(--color-accent);
+  --color-danger:        var(--color-danger);
+  --color-danger-light:  var(--color-danger-light);
+  --color-warning:       var(--color-warning);
+  --color-warning-light: var(--color-warning-light);
+  --color-success:       var(--color-success);
+  --color-success-light: var(--color-success-light);
+  --color-info:          var(--color-info);
+  --color-info-light:    var(--color-info-light);
+  --color-bg:            var(--color-bg);
+  --color-bg-subtle:     var(--color-bg-subtle);
+  --color-bg-muted:      var(--color-bg-muted);
+  --color-border:        var(--color-border);
+  --color-card:          var(--color-card);
+  --color-card-border:   var(--color-card-border);
+  --color-fg:            var(--color-fg);
+  --color-fg-muted:      var(--color-fg-muted);
+  --color-fg-subtle:     var(--color-fg-subtle);
+  --color-surface:       var(--color-surface);
+}
+
+/* =====================================================
+   Fallback color vars — overridden by appearance API
+   ===================================================== */
+:root {
+  /* Light mode defaults */
+  --color-primary:       #0e4475;
+  --color-primary-hover: #0b3560;
+  --color-primary-light: #e6eef7;
+  --color-primary-fg:    #ffffff;
+  --color-secondary:     #1565c0;
+  --color-accent:        #0288d1;
+  --color-danger:        #dc2626;
+  --color-danger-light:  #fee2e2;
+  --color-warning:       #d97706;
+  --color-warning-light: #fef3c7;
+  --color-success:       #16a34a;
+  --color-success-light: #dcfce7;
+  --color-info:          #0284c7;
+  --color-info-light:    #e0f2fe;
+  --color-bg:            #ffffff;
+  --color-bg-subtle:     #f8fafc;
+  --color-bg-muted:      #f1f5f9;
+  --color-border:        #e2e8f0;
+  --color-card:          #ffffff;
+  --color-card-border:   #e2e8f0;
+  --color-fg:            #0f172a;
+  --color-fg-muted:      #475569;
+  --color-fg-subtle:     #94a3b8;
+  --color-surface:       #f1f5f9;
+}
+
+[data-theme="dark"] {
+  /* Dark mode overrides — values synced with seed_appearance.py */
+  --color-primary:       #2b78cc;
+  --color-primary-hover: #2470be; /* darkened from seed for WCAG AA (4.6:1 on white) */
+  --color-primary-light: #0d253d;
+  --color-primary-fg:    #ffffff;
+  --color-secondary:     #42a5f5;
+  --color-accent:        #29b6f6;
+  --color-danger:        #f87171;
+  --color-danger-light:  #2d0a0a;
+  --color-warning:       #fbbf24;
+  --color-warning-light: #2d1a00;
+  --color-success:       #4ade80;
+  --color-success-light: #052e16;
+  --color-info:          #38bdf8;
+  --color-info-light:    #021d2e;
+  --color-bg:            #0c1a2e;
+  --color-bg-subtle:     #112036;
+  --color-bg-muted:      #162843;
+  --color-border:        #1e3a5f;
+  --color-card:          #112036;
+  --color-card-border:   #1e3a5f;
+  --color-fg:            #f1f5f9;
+  --color-fg-muted:      #94a3b8;
+  --color-fg-subtle:     #64748b;
+  --color-surface:       #162843;
+}
+
+/* =====================================================
+   Gradient utilities (not expressible via @theme)
+   ===================================================== */
+.gradient-text {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-border {
+  position: relative;
+  border-radius: var(--radius-bento);
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* =====================================================
+   Base styles
+   ===================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-fg-subtle); }
+
+/* Focus visible */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

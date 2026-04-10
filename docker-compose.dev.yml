@@ -75,5 +75,22 @@ services:
       web:
         condition: service_started
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - INTERNAL_API_URL=http://web:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - REVALIDATE_SECRET=dev-revalidate-secret-change-in-production
+    depends_on:
+      web:
+        condition: service_started
+
 volumes:
   postgres_data_dev:

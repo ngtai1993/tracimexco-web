@@ -31,6 +31,7 @@ LOCAL_APPS = [
     "apps.authentication.apps.AuthenticationConfig",
     "apps.core.apps.CoreConfig",
     "apps.agents.apps.AgentsConfig",
+    "apps.appearance.apps.AppearanceConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -195,3 +196,7 @@ DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@example.com")
 
 # --- Password Reset Token ---
 PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 24
+
+# --- Appearance ---
+APPEARANCE_CACHE_TTL = 3600           # 1 giờ
+APPEARANCE_MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB

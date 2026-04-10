@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/v1/auth/", include("apps.authentication.urls", namespace="authentication")),
     path("api/v1/users/", include("apps.users.urls", namespace="users")),
     path("api/v1/agents/", include("apps.agents.urls", namespace="agents")),
+    path("api/v1/appearance/", include("apps.appearance.urls", namespace="appearance")),
 ]
 
 if settings.DEBUG:
