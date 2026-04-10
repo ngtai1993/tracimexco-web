@@ -1,4 +1,7 @@
 import logging
+import re
+
+from django.db.models import Q
 
 from apps.graph_rag.models import DocumentChunk, Document
 
@@ -9,40 +12,56 @@ class RetrievalService:
     """Multi-strategy retrieval engine with image support."""
 
     @staticmethod
+    def _build_keyword_filter(query: str) -> Q:
+        """Tạo OR-filter từ các từ khóa chính trong query (bỏ stop-words ngắn)."""
+        stop = {"là", "và", "của", "trong", "the", "is", "a", "an", "to", "of", "in"}
+        words = [
+            w for w in re.split(r"[\s\.,;?!]+", query)
+            if len(w) >= 3 and w.lower() not in stop
+        ]
+        if not words:
+            words = [query[:50]]
+        q = Q()
+        for word in words[:8]:  # tối đa 8 từ khóa
+            q |= Q(content__icontains=word)
+        return q
+
+    @staticmethod
     def vector_search(
         query: str, kb_ids: list[str], top_k: int = 10, threshold: float = 0.7
     ) -> list[dict]:
-        """pgvector cosine similarity search. Placeholder until pgvector installed."""
+        """pgvector cosine similarity search. Fallback: keyword-based scoring until pgvector installed."""
         # Real implementation:
         # 1. Embed query using same embedding model
-        # 2. SELECT * FROM rag_document_chunks
-        #    ORDER BY embedding <=> query_embedding
-        #    LIMIT top_k
-        #    WHERE cosine_similarity > threshold
+        # 2. SELECT * FROM rag_document_chunks ORDER BY embedding <=> query_embedding LIMIT top_k
 
-        # Fallback: simple text search
+        keyword_filter = RetrievalService._build_keyword_filter(query)
         chunks = DocumentChunk.objects.filter(
             document__knowledge_base_id__in=kb_ids,
             document__is_deleted=False,
             is_deleted=False,
             is_image_chunk=False,
-        ).filter(
-            content__icontains=query[:100]
-        )[:top_k]
+        ).filter(keyword_filter)[:top_k]
 
-        return [
-            {
+        query_words = set(re.split(r"[\s\.,;?!]+", query.lower()))
+
+        results = []
+        for c in chunks.select_related("document"):
+            chunk_lower = c.content.lower()
+            overlap = sum(1 for w in query_words if len(w) >= 3 and w in chunk_lower)
+            score = min(0.95, 0.4 + overlap * 0.1)
+            results.append({
                 "type": "chunk",
                 "id": str(c.id),
                 "content": c.content,
                 "document_id": str(c.document_id),
                 "document_title": c.document.title,
                 "chunk_index": c.chunk_index,
-                "score": 0.5,
+                "score": round(score, 2),
                 "metadata": c.metadata,
-            }
-            for c in chunks.select_related("document")
-        ]
+            })
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results
 
     @staticmethod
     def image_search(
@@ -96,13 +115,12 @@ class RetrievalService:
         query: str, kb_ids: list[str], top_k: int = 10
     ) -> list[dict]:
         """Full-text search trên PostgreSQL."""
+        keyword_filter = RetrievalService._build_keyword_filter(query)
         chunks = DocumentChunk.objects.filter(
             document__knowledge_base_id__in=kb_ids,
             document__is_deleted=False,
             is_deleted=False,
-        ).filter(
-            content__icontains=query[:100]
-        ).select_related("document")[:top_k]
+        ).filter(keyword_filter).select_related("document")[:top_k]
 
         return [
             {

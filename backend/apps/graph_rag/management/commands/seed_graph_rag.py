@@ -19,6 +19,7 @@ from apps.graph_rag.models import (
     RAGInstanceKnowledgeBase,
 )
 from apps.graph_rag.constants import DEFAULT_RETRIEVAL_CONFIG, DEFAULT_GENERATION_CONFIG
+from apps.graph_rag.services.document_processor import DocumentProcessorService
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -444,23 +445,25 @@ class Command(BaseCommand):
 
         # ── Documents ────────────────────────────────────────────────────────
         doc_created = doc_skipped = 0
+        new_doc_ids = []
         for data in DOCUMENTS:
             kb = kb_objects.get(data["kb_slug"])
             if not kb:
                 continue
-            _, created = Document.objects.get_or_create(
+            doc, created = Document.objects.get_or_create(
                 knowledge_base=kb,
                 title=data["title"],
                 defaults={
                     "description": data["description"],
                     "source_type": data["source_type"],
                     "content_text": data["content_text"],
-                    "processing_status": data["processing_status"],
+                    "processing_status": "pending",
                     "is_deleted": False,
                 },
             )
             if created:
                 doc_created += 1
+                new_doc_ids.append(str(doc.id))
                 # Cập nhật document_count cho KB
                 kb.document_count += 1
                 kb.save(update_fields=["document_count"])
@@ -468,6 +471,21 @@ class Command(BaseCommand):
                 doc_skipped += 1
 
         self.stdout.write(f"Documents: {doc_created} tạo mới, {doc_skipped} đã tồn tại (bỏ qua).")
+
+        # ── Process new documents → tạo DocumentChunks ────────────────────────
+        if new_doc_ids:
+            chunk_total = 0
+            for doc_id in new_doc_ids:
+                try:
+                    DocumentProcessorService.process_document(doc_id)
+                    from apps.graph_rag.models import DocumentChunk
+                    count = DocumentChunk.objects.filter(document_id=doc_id).count()
+                    chunk_total += count
+                except Exception as exc:
+                    self.stdout.write(
+                        self.style.WARNING(f"  ⚠ Không thể process document {doc_id}: {exc}")
+                    )
+            self.stdout.write(f"DocumentChunks: {chunk_total} chunks tạo từ {len(new_doc_ids)} documents.")
 
         # ── RAG Instances ────────────────────────────────────────────────────
         inst_created = inst_updated = 0

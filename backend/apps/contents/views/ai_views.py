@@ -15,7 +15,7 @@ from apps.contents.serializers import (
     AIImproveSerializer,
     AIGenerateCaptionSerializer,
 )
-from apps.contents.services import AIGenerationService
+from apps.contents.services import AIGenerationService, GeminiDirectService
 
 
 class AIGenerateView(APIView):
@@ -72,15 +72,18 @@ class AISuggestHashtagsView(APIView):
         serializer = AISuggestHashtagsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        count = data.get("count", 10)
-        prompt = (
-            f"Đề xuất {count} hashtag phù hợp cho bài viết trên nền tảng "
-            f"{data.get('platform_type', 'mạng xã hội')}.\n\n"
-            f"Nội dung:\n{data['content']}\n\n"
-            "Trả về danh sách hashtag, mỗi hashtag bắt đầu bằng #."
-        )
-        # Simple stub — returns placeholder; full implementation hooks into RAG
-        return Response({"data": {"hashtags": [], "prompt_used": prompt}, "message": "Tính năng sẽ hoạt động khi RAG được cấu hình.", "errors": None})
+        try:
+            hashtags = GeminiDirectService.suggest_hashtags(
+                content=data["content"],
+                platform_type=data.get("platform_type", ""),
+                count=data.get("count", 10),
+            )
+            return Response({"data": {"hashtags": hashtags}, "message": "OK", "errors": None})
+        except Exception as exc:
+            return Response(
+                {"data": None, "message": f"Lỗi AI: {exc}", "errors": None},
+                status=http_status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class AISummarizeView(APIView):
@@ -89,7 +92,19 @@ class AISummarizeView(APIView):
     def post(self, request):
         serializer = AISummarizeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return Response({"data": {"summary": ""}, "message": "Tính năng sẽ hoạt động khi RAG được cấu hình.", "errors": None})
+        data = serializer.validated_data
+        try:
+            summary = GeminiDirectService.summarize(
+                content=data["content"],
+                platform_type=data.get("platform_type", ""),
+                max_length=data.get("max_length", 280),
+            )
+            return Response({"data": {"summary": summary}, "message": "OK", "errors": None})
+        except Exception as exc:
+            return Response(
+                {"data": None, "message": f"Lỗi AI: {exc}", "errors": None},
+                status=http_status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class AITranslateView(APIView):
@@ -98,7 +113,18 @@ class AITranslateView(APIView):
     def post(self, request):
         serializer = AITranslateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return Response({"data": {"translated": ""}, "message": "Tính năng sẽ hoạt động khi RAG được cấu hình.", "errors": None})
+        data = serializer.validated_data
+        try:
+            translated = GeminiDirectService.translate(
+                content=data["content"],
+                target_language=data["target_language"],
+            )
+            return Response({"data": {"translated": translated}, "message": "OK", "errors": None})
+        except Exception as exc:
+            return Response(
+                {"data": None, "message": f"Lỗi AI: {exc}", "errors": None},
+                status=http_status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class AIImproveView(APIView):
@@ -107,7 +133,18 @@ class AIImproveView(APIView):
     def post(self, request):
         serializer = AIImproveSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return Response({"data": {"improved": ""}, "message": "Tính năng sẽ hoạt động khi RAG được cấu hình.", "errors": None})
+        data = serializer.validated_data
+        try:
+            improved = GeminiDirectService.improve(
+                content=data["content"],
+                improvement_type=data["improvement_type"],
+            )
+            return Response({"data": {"improved": improved}, "message": "OK", "errors": None})
+        except Exception as exc:
+            return Response(
+                {"data": None, "message": f"Lỗi AI: {exc}", "errors": None},
+                status=http_status.HTTP_502_BAD_GATEWAY,
+            )
 
 
 class AIGenerateCaptionView(APIView):

@@ -80,7 +80,7 @@ API_KEYS = [
     {
         "provider_slug": "google-gemini",
         "name": "Gemini API Key",
-        "raw_key": "AIzaSy-sample-google-gemini-api-key-for-dev-only-xxx",
+        "raw_key": "AIzaSyAYb3X3AWbZvjvtEDZwmwIM6Y8GavIHn8M",
         "priority": 1,
     },
     # Groq

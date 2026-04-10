@@ -208,6 +208,14 @@ class PipelineService:
 
         return "\n\n".join(parts)
 
+    # Default models per provider
+    _PROVIDER_DEFAULT_MODELS: dict = {
+        "google-gemini": "gemini-2.0-flash",
+        "openai": "gpt-4o-mini",
+        "anthropic": "claude-3-5-haiku-20241022",
+    }
+    _PLACEHOLDER_MARKERS: tuple = ("sample", "placeholder", "dev-only", "only-xxx", "for-dev", "test")
+
     @staticmethod
     def _generate_answer(
         instance: RAGInstance,
@@ -215,30 +223,165 @@ class PipelineService:
         context: str,
         images: list[dict],
     ) -> str:
-        """Generate answer via LLM. Placeholder."""
-        # Real implementation:
-        # 1. Build system prompt with {context}, {sources}
-        # 2. Call LLM via AgentKeyService
-        # 3. Return generated text
-        #
-        # from apps.agents.services.agent_key_service import AgentKeyService
-        # api_key = AgentKeyService.get_active_key(instance.provider.slug)
-        # config = instance.generation_config
-        # system = instance.system_prompt.format(context=context, ...)
-        # response = openai.chat.completions.create(...)
+        """Generate answer using the RAG instance's configured provider/model.
 
-        answer = (
-            f"[Placeholder — LLM chưa kết nối]\n\n"
-            f"Query: {query}\n\n"
-            f"Tìm thấy {len(context.split('['))-1} chunks liên quan."
+        Resolution order:
+        1. Use the provider set on the instance with its stored API key.
+        2. If the key is missing or a placeholder, fall back to google-gemini.
+        3. If Gemini key is also unavailable, return an error string.
+        """
+        from apps.agents.services.agent_key_service import AgentKeyService
+        from apps.agents.exceptions import AgentAPIKeyNotFound
+
+        provider_slug = instance.provider.slug
+        api_key = None
+
+        if provider_slug == "google-gemini":
+            try:
+                api_key = AgentKeyService.get_active_key("google-gemini")
+            except AgentAPIKeyNotFound:
+                pass
+        else:
+            # Try the configured provider first
+            try:
+                candidate = AgentKeyService.get_active_key(provider_slug)
+                if any(m in candidate for m in PipelineService._PLACEHOLDER_MARKERS):
+                    raise ValueError("placeholder key")
+                api_key = candidate
+            except Exception:
+                # Key missing or placeholder — fall back to Gemini
+                logger.info(
+                    "Provider '%s' key not available or placeholder, falling back to google-gemini",
+                    provider_slug,
+                )
+                try:
+                    api_key = AgentKeyService.get_active_key("google-gemini")
+                    provider_slug = "google-gemini"
+                except AgentAPIKeyNotFound:
+                    pass
+
+        if not api_key:
+            return (
+                f"[Lỗi: không lấy được API key cho provider '{instance.provider.slug}']\n\n"
+                f"Query: {query}"
+            )
+
+        gen_config = instance.generation_config or {}
+        default_model = PipelineService._PROVIDER_DEFAULT_MODELS.get(provider_slug, "gemini-2.0-flash")
+        # Prefer model from agent_config (when provider unchanged), then gen_config, then default
+        if instance.agent_config and instance.provider.slug == provider_slug:
+            model_name = instance.agent_config.model_name or gen_config.get("model_name") or default_model
+        else:
+            model_name = gen_config.get("model_name") or default_model
+        # Guard: if we fell back to Gemini, ensure the model slug is a Gemini model
+        if provider_slug == "google-gemini" and not model_name.startswith("gemini"):
+            model_name = "gemini-2.0-flash"
+
+        temperature = float(gen_config.get("temperature", 0.7))
+        max_tokens = int(gen_config.get("max_tokens", 1024))
+
+        # Build system prompt
+        system_prompt_template = instance.system_prompt or (
+            "Bạn là trợ lý AI. Sử dụng context bên dưới để trả lời câu hỏi.\n\n"
+            "Context:\n{context}\n\n"
+            "Nếu không tìm thấy thông tin liên quan, hãy nói rõ."
+        )
+        try:
+            system_prompt = system_prompt_template.format(
+                context=context or "(không có context)",
+                sources="",
+                language="Vietnamese",
+            )
+        except KeyError:
+            system_prompt = system_prompt_template
+
+        answer = PipelineService._call_provider(
+            provider_slug=provider_slug,
+            api_key=api_key,
+            model_name=model_name,
+            system_prompt=system_prompt,
+            query=query,
+            temperature=temperature,
+            max_tokens=max_tokens,
         )
 
         if images:
-            answer += f"\n\nTìm thấy {len(images)} hình ảnh liên quan:"
-            for img in images:
-                answer += f"\n- {img.get('title', 'Image')}: {img.get('caption', '')}"
+            answer += f"\n\n---\n*Tìm thấy {len(images)} hình ảnh liên quan.*"
 
         return answer
+
+    @staticmethod
+    def _call_provider(
+        *,
+        provider_slug: str,
+        api_key: str,
+        model_name: str,
+        system_prompt: str,
+        query: str,
+        temperature: float,
+        max_tokens: int,
+    ) -> str:
+        """Dispatch to the correct LLM SDK based on provider_slug."""
+
+        if provider_slug == "google-gemini":
+            try:
+                import google.generativeai as genai
+
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    generation_config=genai.GenerationConfig(
+                        temperature=temperature,
+                        max_output_tokens=max_tokens,
+                    ),
+                )
+                full_prompt = f"{system_prompt}\n\nCâu hỏi: {query}"
+                response = model.generate_content(full_prompt)
+                return response.text
+            except Exception as exc:
+                logger.exception("Gemini API call failed: %s", exc)
+                raise RuntimeError(f"Lỗi gọi Gemini API: {exc}") from exc
+
+        elif provider_slug == "openai":
+            try:
+                import openai as openai_sdk
+
+                client = openai_sdk.OpenAI(api_key=api_key)
+                resp = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": query},
+                    ],
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+                return resp.choices[0].message.content
+            except Exception as exc:
+                logger.exception("OpenAI API call failed: %s", exc)
+                raise RuntimeError(f"Lỗi gọi OpenAI API: {exc}") from exc
+
+        elif provider_slug == "anthropic":
+            try:
+                import anthropic as anthropic_sdk
+
+                client = anthropic_sdk.Anthropic(api_key=api_key)
+                resp = client.messages.create(
+                    model=model_name,
+                    max_tokens=max_tokens,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": query}],
+                )
+                return resp.content[0].text
+            except Exception as exc:
+                logger.exception("Anthropic API call failed: %s", exc)
+                raise RuntimeError(f"Lỗi gọi Anthropic API: {exc}") from exc
+
+        else:
+            raise RuntimeError(
+                f"Provider '{provider_slug}' chưa được hỗ trợ. "
+                f"Các provider hỗ trợ: google-gemini, openai, anthropic."
+            )
 
     @staticmethod
     def _get_or_create_conversation(

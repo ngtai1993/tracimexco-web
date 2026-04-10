@@ -68,12 +68,12 @@ class AIGenerationService:
         """Gọi RAG pipeline để sinh nội dung."""
         try:
             from apps.graph_rag.services.pipeline_service import PipelineService
-            result = PipelineService.query(
-                rag_instance=gen.rag_instance,
+            result = PipelineService.process_query(
+                rag_instance_id=str(gen.rag_instance_id),
                 query=gen.prompt,
-                user=gen.created_by,
-                extra_context=gen.context_data,
+                user_id=str(gen.created_by_id),
+                conversation_id=None,
             )
-            return result.get("answer", result.get("content", ""))
+            return result.get("message", {}).get("content", "")
         except (ImportError, AttributeError) as exc:
             raise RuntimeError(f"RAG pipeline không khả dụng: {exc}") from exc
