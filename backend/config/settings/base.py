@@ -164,6 +164,7 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS", default="http://localhost:3000"
 ).split(",")
+CORS_ALLOW_CREDENTIALS = True
 
 # --- Redis ---
 REDIS_URL = config("REDIS_URL", default="redis://redis:6379/0")

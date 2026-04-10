@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import { fetchAppearanceConfig, buildCssVars } from '@/lib/appearance'
+import { AppearanceProvider } from '@/features/appearance'
 import './globals.css'
 
 const inter = Inter({
@@ -47,7 +48,9 @@ export default async function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: themeCss }} />
       )}
       <body className="min-h-dvh bg-bg text-fg font-sans antialiased">
-        {children}
+        <AppearanceProvider config={config}>
+          {children}
+        </AppearanceProvider>
       </body>
     </html>
   );

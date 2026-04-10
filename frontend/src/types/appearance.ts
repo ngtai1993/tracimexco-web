@@ -11,10 +11,15 @@ export interface ColorGroups {
   [group: string]: ColorToken[]
 }
 
+export interface MediaAssetRef {
+  url: string | null
+  alt: string
+}
+
 export interface AppearanceConfig {
   colors: {
     light: ColorGroups
     dark: ColorGroups
   }
-  media: Record<string, string | null>
+  media: Record<string, MediaAssetRef | null>
 }

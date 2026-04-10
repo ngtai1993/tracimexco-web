@@ -3,9 +3,19 @@ import { useActionState } from 'react'
 import { registerAction } from '../actions/authActions'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { authClient } from '../lib/authClient'
 
 export function RegisterForm() {
   const [state, action, isPending] = useActionState(registerAction, null)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!state?.success || !state.data) return
+    authClient.setTokens(state.data.access, state.data.refresh)
+    router.replace('/dashboard')
+  }, [router, state])
 
   return (
     <form action={action} className="flex flex-col gap-4">

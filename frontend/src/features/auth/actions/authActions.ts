@@ -31,9 +31,9 @@ async function setAuthCookies(tokens: AuthTokens) {
 }
 
 export async function loginAction(
-  _prev: ActionResult | null,
+  _prev: ActionResult<AuthTokens> | null,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<ActionResult<AuthTokens>> {
   const raw = {
     email: formData.get('email') as string,
     password: formData.get('password') as string,
@@ -63,18 +63,16 @@ export async function loginAction(
 
     const tokens: AuthTokens = json.data
     await setAuthCookies(tokens)
-    // Refresh token stored client-side (done in LoginForm after success)
+    return { success: true, data: tokens }
   } catch {
     return { success: false, error: 'Không thể kết nối đến máy chủ' }
   }
-
-  redirect('/dashboard')
 }
 
 export async function registerAction(
-  _prev: ActionResult | null,
+  _prev: ActionResult<AuthTokens> | null,
   formData: FormData
-): Promise<ActionResult> {
+): Promise<ActionResult<AuthTokens>> {
   const raw = {
     email: formData.get('email') as string,
     full_name: formData.get('full_name') as string,
@@ -120,13 +118,18 @@ export async function registerAction(
 
     if (loginRes.ok) {
       const loginJson = await loginRes.json()
-      await setAuthCookies(loginJson.data)
+      const tokens: AuthTokens = loginJson.data
+      await setAuthCookies(tokens)
+      return { success: true, data: tokens }
+    }
+
+    return {
+      success: false,
+      error: 'Đăng ký thành công nhưng tự động đăng nhập thất bại. Vui lòng đăng nhập lại.',
     }
   } catch {
     return { success: false, error: 'Không thể kết nối đến máy chủ' }
   }
-
-  redirect('/dashboard')
 }
 
 export async function logoutAction(): Promise<void> {

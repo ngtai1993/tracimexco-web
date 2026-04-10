@@ -15,12 +15,12 @@ const navLinks = [
 ]
 
 export function Header({ appearance, user }: HeaderProps) {
-  const logoSrc = appearance?.media?.logo ?? null
+  const logoAsset = appearance?.media?.['logo'] ?? null
 
   return (
     <header className="sticky top-0 z-40 h-16 border-b border-border bg-bg/80 backdrop-blur-md">
       <div className="mx-auto max-w-7xl h-full px-4 sm:px-6 flex items-center justify-between gap-4">
-        <AppLogo src={logoSrc} />
+        <AppLogo asset={logoAsset} />
 
         <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (

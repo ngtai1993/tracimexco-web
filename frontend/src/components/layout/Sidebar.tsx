@@ -4,12 +4,14 @@ import {
   User,
   LogOut,
   Settings,
+  Palette,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/profile', label: 'Hồ sơ', icon: User },
+  { href: '/dashboard/appearance', label: 'Appearance', icon: Palette },
   { href: '/settings', label: 'Cài đặt', icon: Settings },
 ]
 

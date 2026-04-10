@@ -5,15 +5,17 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useEffect } from 'react'
 import { authClient } from '../lib/authClient'
+import { useRouter } from 'next/navigation'
 
 export function LoginForm() {
   const [state, action, isPending] = useActionState(loginAction, null)
+  const router = useRouter()
 
-  // Store refresh token client-side after successful login
   useEffect(() => {
-    if (state?.success === false) return
-    // On redirect, this effect won't run. This is for future non-redirect flows.
-  }, [state])
+    if (!state?.success || !state.data) return
+    authClient.setTokens(state.data.access, state.data.refresh)
+    router.replace('/dashboard')
+  }, [router, state])
 
   return (
     <form action={action} className="flex flex-col gap-4">

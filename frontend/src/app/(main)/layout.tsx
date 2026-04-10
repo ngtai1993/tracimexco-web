@@ -16,9 +16,9 @@ export default async function MainLayout({
   return (
     <div className="min-h-dvh flex flex-col bg-bg">
       <Header appearance={config} user={null} />
-      <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-8">
+      <div className="flex-1 flex min-h-0">
         {children}
-      </main>
+      </div>
     </div>
   )
 }

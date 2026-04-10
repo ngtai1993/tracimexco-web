@@ -1,19 +1,19 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import type { MediaAssetRef } from '@/types/appearance'
 
 interface AppLogoProps {
-  src?: string | null
-  alt?: string
+  asset?: MediaAssetRef | null
   height?: number
 }
 
-export function AppLogo({ src, alt = 'Logo', height = 36 }: AppLogoProps) {
+export function AppLogo({ asset, height = 36 }: AppLogoProps) {
   return (
     <Link href="/" className="flex items-center gap-2 shrink-0">
-      {src ? (
+      {asset?.url ? (
         <Image
-          src={src}
-          alt={alt}
+          src={asset.url}
+          alt={asset.alt || 'Logo'}
           height={height}
           width={height * 4}
           className="object-contain h-9 w-auto"

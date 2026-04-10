@@ -10,10 +10,12 @@ export const metadata: Metadata = {
 
 export default function LandingPage() {
   return (
-    <div className="flex flex-col gap-16">
-      <HeroBento />
-      <FeaturesBento />
-      <CTASection />
-    </div>
+    <main className="flex-1 mx-auto w-full max-w-7xl px-4 sm:px-6 py-8">
+      <div className="flex flex-col gap-16">
+        <HeroBento />
+        <FeaturesBento />
+        <CTASection />
+      </div>
+    </main>
   )
 }
