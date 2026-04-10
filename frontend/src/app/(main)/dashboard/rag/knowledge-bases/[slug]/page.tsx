@@ -2,14 +2,21 @@
 import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Settings2, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { SkeletonCard } from '@/components/ui/Skeleton'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
-import { DocumentTable, DocumentUploadForm, ChunkViewer, GraphStatusCard } from '@/features/rag'
+import {
+  KBStatsBar,
+  DocumentTable,
+  DocumentPreviewPanel,
+  DocumentUploadForm,
+  ChunkViewer,
+  GraphStatusCard,
+} from '@/features/rag'
 import { useKnowledgeBase } from '@/features/rag/hooks'
 import type { Document } from '@/features/rag/types'
 
@@ -18,9 +25,17 @@ export default function KBDetailPage() {
   const { kb, loading, refetch } = useKnowledgeBase(slug)
 
   const [showUpload, setShowUpload] = useState(false)
+  const [showGraphPanel, setShowGraphPanel] = useState(false)
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [viewChunksDoc, setViewChunksDoc] = useState<Document | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const { toasts, addToast, removeToast } = useToast()
+
+  const handleSelectDoc = (doc: Document) => {
+    // Toggle: click same doc → close panel
+    setSelectedDoc((prev) => (prev?.id === doc.id ? null : doc))
+    setViewChunksDoc(null)
+  }
 
   if (loading) return <SkeletonCard />
   if (!kb) {
@@ -38,6 +53,14 @@ export default function KBDetailPage() {
     <>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
 
+      {/* Overlay dim khi panel mở */}
+      {selectedDoc && (
+        <div
+          className="fixed inset-0 z-30 bg-black/20"
+          onClick={() => setSelectedDoc(null)}
+        />
+      )}
+
       <Breadcrumb
         items={[
           { label: 'RAG System', href: '/dashboard/rag' },
@@ -47,54 +70,78 @@ export default function KBDetailPage() {
       />
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-5">
         <div>
           <h1 className="text-2xl font-semibold text-fg">{kb.name}</h1>
-          <p className="text-sm text-fg-muted mt-1">
-            {kb.description || `${kb.document_count} documents • ${kb.total_chunks} chunks`}
-          </p>
-          <div className="flex items-center gap-3 mt-2 text-xs text-fg-muted">
-            <span className="capitalize">{kb.chunk_strategy}</span>
-            <span>•</span>
-            <span>Chunk: {kb.chunk_size}/{kb.chunk_overlap}</span>
-            <span>•</span>
-            <span>{kb.embedding_model}</span>
-            <span>•</span>
-            <span>{kb.embedding_dimensions}d</span>
-          </div>
-        </div>
-        <Button size="sm" onClick={() => setShowUpload(true)}>
-          <Plus size={14} /> Thêm tài liệu
-        </Button>
-      </div>
-
-      {/* Graph Status + Documents side by side on large screens */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-        <div className="lg:col-span-1">
-          <GraphStatusCard kb={kb} onRefresh={refetch} onToast={addToast} />
-        </div>
-        <div className="lg:col-span-3">
-          {viewChunksDoc ? (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-fg">Chunks</h3>
-                <Button size="sm" variant="ghost" onClick={() => setViewChunksDoc(null)}>
-                  ← Back to documents
-                </Button>
-              </div>
-              <ChunkViewer docId={viewChunksDoc.id} docTitle={viewChunksDoc.title} />
-            </div>
-          ) : (
-            <DocumentTable
-              kbSlug={slug}
-              onViewChunks={setViewChunksDoc}
-              onAdd={() => setShowUpload(true)}
-              refreshKey={refreshKey}
-              onToast={addToast}
-            />
+          {kb.description && (
+            <p className="text-sm text-fg-muted mt-1 max-w-xl">{kb.description}</p>
           )}
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowGraphPanel((v) => !v)}
+            title="Knowledge Graph"
+          >
+            <Settings2 size={14} />
+          </Button>
+          <Button size="sm" onClick={() => setShowUpload(true)}>
+            <Plus size={14} /> Thêm tài liệu
+          </Button>
+        </div>
       </div>
+
+      {/* Stats bar */}
+      <KBStatsBar kb={kb} className="mb-6" />
+
+      {/* Graph panel (collapsible) */}
+      {showGraphPanel && (
+        <div className="mb-6 bg-card border border-border rounded-bento p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-fg">Knowledge Graph</h3>
+            <button
+              onClick={() => setShowGraphPanel(false)}
+              className="p-1 rounded hover:bg-border/40 text-fg-muted transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          <GraphStatusCard kb={kb} onRefresh={refetch} onToast={addToast} />
+        </div>
+      )}
+
+      {/* Inline ChunkViewer khi bấm Eye */}
+      {viewChunksDoc && (
+        <div className="mb-6 bg-card border border-border rounded-bento p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-fg">Chunks — {viewChunksDoc.title}</h3>
+            <Button size="sm" variant="ghost" onClick={() => setViewChunksDoc(null)}>
+              <X size={14} /> Đóng
+            </Button>
+          </div>
+          <ChunkViewer docId={viewChunksDoc.id} docTitle={viewChunksDoc.title} />
+        </div>
+      )}
+
+      {/* Document table */}
+      <DocumentTable
+        kbSlug={slug}
+        onViewChunks={(doc) => {
+          setViewChunksDoc((prev) => (prev?.id === doc.id ? null : doc))
+        }}
+        onSelectDoc={handleSelectDoc}
+        selectedDocId={selectedDoc?.id}
+        onAdd={() => setShowUpload(true)}
+        refreshKey={refreshKey}
+        onToast={addToast}
+      />
+
+      {/* Document preview side panel */}
+      <DocumentPreviewPanel
+        document={selectedDoc}
+        onClose={() => setSelectedDoc(null)}
+      />
 
       {/* Upload Modal */}
       <Modal open={showUpload} onClose={() => setShowUpload(false)} title="Thêm tài liệu" className="max-w-lg">
@@ -111,3 +158,4 @@ export default function KBDetailPage() {
     </>
   )
 }
+

@@ -193,6 +193,29 @@ class RAGInstanceKBView(APIView):
         )
 
 
+class RAGInstanceKBRemoveView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, slug, kb_id):
+        try:
+            instance = RAGSelector.get_instance_by_slug(slug)
+        except RAGInstanceNotFound as e:
+            return Response(
+                {"data": None, "message": str(e), "errors": None},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        removed = RAGInstanceService.remove_knowledge_base(
+            instance_id=instance.id,
+            kb_id=kb_id,
+        )
+        if not removed:
+            return Response(
+                {"data": None, "message": "Knowledge Base không được gán cho instance này", "errors": None},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class RAGInstanceSkillView(APIView):
     permission_classes = [IsAdminUser]
 

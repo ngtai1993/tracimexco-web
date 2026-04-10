@@ -1,20 +1,176 @@
 'use client'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Pencil, Trash2, Copy, Settings2, Database, Shield, BarChart3 } from 'lucide-react'
+import { Pencil, Trash2, Copy, Settings2, Database, Shield, BarChart3, Plus, X, ExternalLink, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Tabs } from '@/components/ui/Tabs'
 import { Breadcrumb } from '@/components/ui/Breadcrumb'
 import { StatusBadge } from '@/components/ui/StatusBadge'
-import { SkeletonCard } from '@/components/ui/Skeleton'
+import { SkeletonCard, SkeletonTable } from '@/components/ui/Skeleton'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import { InstanceForm, ConfigPanel, AnalyticsDashboard, UsageLogTable, AccessTable, AccessGrantForm } from '@/features/rag'
-import { useInstance, useDeleteInstance, useCloneInstance } from '@/features/rag/hooks'
+import { useInstance, useDeleteInstance, useCloneInstance, useInstanceKBs, useAssignKB, useKnowledgeBases } from '@/features/rag/hooks'
+import { ragApi } from '@/features/rag/api'
+import { Select } from '@/components/ui/Select'
+import type { InstanceKBAssignment } from '@/features/rag/types'
 
+// ── Inline KB management panel ────────────────────────────────────────────────
+function InstanceKBsPanel({ instanceSlug, onToast }: { instanceSlug: string; onToast: (m: string, v: 'success' | 'danger') => void }) {
+  const { assignments, loading, error, refetch } = useInstanceKBs(instanceSlug)
+  const { assign, loading: assigning } = useAssignKB()
+  const { kbs } = useKnowledgeBases()
+
+  const [selectedKBId, setSelectedKBId] = useState('')
+  const [priority, setPriority] = useState('1')
+  const [removing, setRemoving] = useState<string | null>(null)
+
+  const assignedIds = new Set(assignments.map((a) => a.knowledge_base.id))
+  const availableKBs = kbs.filter((kb) => !assignedIds.has(kb.id))
+
+  const handleAssign = useCallback(async () => {
+    if (!selectedKBId) return
+    const ok = await assign(instanceSlug, { knowledge_base_id: selectedKBId, priority: Number(priority) || 1 })
+    if (ok) {
+      onToast('Đã gán Knowledge Base', 'success')
+      setSelectedKBId('')
+      refetch()
+    } else {
+      onToast('Gán KB thất bại', 'danger')
+    }
+  }, [assign, instanceSlug, selectedKBId, priority, onToast, refetch])
+
+  const handleRemove = useCallback(async (kbId: string) => {
+    setRemoving(kbId)
+    try {
+      await ragApi.removeKBFromInstance(instanceSlug, kbId)
+      onToast('Đã gỡ Knowledge Base', 'success')
+      refetch()
+    } catch {
+      onToast('Gỡ KB thất bại', 'danger')
+    } finally {
+      setRemoving(null)
+    }
+  }, [instanceSlug, onToast, refetch])
+
+  if (loading) return <SkeletonTable rows={3} />
+  if (error) return <p className="text-sm text-danger py-4">{error}</p>
+
+  return (
+    <div className="space-y-4">
+      {/* Assign form */}
+      {availableKBs.length > 0 && (
+        <div className="flex items-end gap-3 p-4 bg-surface border border-border rounded-bento">
+          <div className="flex-1">
+            <Select
+              label="Thêm Knowledge Base"
+              value={selectedKBId}
+              onChange={(e) => setSelectedKBId(e.target.value)}
+              placeholder="Chọn KB để gán..."
+              options={availableKBs.map((kb) => ({ value: kb.id, label: kb.name }))}
+            />
+          </div>
+          <div className="w-24">
+            <Select
+              label="Priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              options={[
+                { value: '1', label: '1 (cao)' },
+                { value: '2', label: '2' },
+                { value: '3', label: '3' },
+                { value: '4', label: '4' },
+                { value: '5', label: '5 (thấp)' },
+              ]}
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={handleAssign}
+            loading={assigning}
+            disabled={!selectedKBId}
+            className="mb-0.5"
+          >
+            <Plus size={14} /> Gán
+          </Button>
+        </div>
+      )}
+
+      {/* Assigned list */}
+      {assignments.length === 0 ? (
+        <div className="text-center py-12 text-fg-muted text-sm border border-dashed border-border rounded-bento">
+          <Database size={32} strokeWidth={1.5} className="mx-auto mb-2 text-fg-subtle" />
+          Chưa gán Knowledge Base nào. Thêm KB để instance có thể sử dụng dữ liệu.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {assignments
+            .sort((a: InstanceKBAssignment, b: InstanceKBAssignment) => a.priority - b.priority)
+            .map((assignment: InstanceKBAssignment) => {
+              const kb = assignment.knowledge_base
+              return (
+                <div
+                  key={kb.id}
+                  className="flex items-center justify-between p-4 bg-card border border-border rounded-bento hover:border-primary/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <ArrowUpDown size={13} className="text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-fg text-sm">{kb.name}</p>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-border/50 text-fg-muted font-mono">
+                          p={assignment.priority}
+                        </span>
+                      </div>
+                      {kb.description && (
+                        <p className="text-xs text-fg-muted truncate max-w-xs mt-0.5">{kb.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1 text-[11px] text-fg-subtle">
+                        <span>{kb.document_count} docs</span>
+                        <span>·</span>
+                        <span>{kb.total_chunks.toLocaleString()} chunks</span>
+                        <span>·</span>
+                        <StatusBadge status={kb.graph_status ?? 'not_built'} />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Link
+                      href={`/dashboard/rag/knowledge-bases/${kb.slug}`}
+                      target="_blank"
+                      className="p-1.5 rounded hover:bg-surface text-fg-muted hover:text-primary transition-colors"
+                      title="Mở Knowledge Base"
+                    >
+                      <ExternalLink size={14} />
+                    </Link>
+                    <button
+                      onClick={() => handleRemove(kb.id)}
+                      disabled={removing === kb.id}
+                      className="p-1.5 rounded hover:bg-danger/10 text-fg-muted hover:text-danger transition-colors disabled:opacity-40"
+                      title="Gỡ khỏi instance"
+                    >
+                      {removing === kb.id ? (
+                        <span className="block w-3.5 h-3.5 border-2 border-danger/50 border-t-danger rounded-full animate-spin" />
+                      ) : (
+                        <X size={14} />
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function InstanceDetailPage() {
   const { slug } = useParams<{ slug: string }>()
   const router = useRouter()
@@ -119,18 +275,7 @@ export default function InstanceDetailPage() {
       )}
 
       {activeTab === 'kbs' && (
-        <div>
-          <div className="mb-4">
-            <Link href={`/dashboard/rag/instances/${slug}/knowledge-bases`}>
-              <Button size="sm" variant="outline">
-                <Database size={14} /> Quản lý KB gán cho instance
-              </Button>
-            </Link>
-          </div>
-          <p className="text-sm text-fg-muted">
-            Truy cập trang quản lý KB để gán/bỏ gán knowledge base cho instance này.
-          </p>
-        </div>
+        <InstanceKBsPanel instanceSlug={slug} onToast={addToast} />
       )}
 
       {activeTab === 'access' && (

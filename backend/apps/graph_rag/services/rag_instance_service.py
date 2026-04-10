@@ -141,6 +141,14 @@ class RAGInstanceService:
         )
 
     @staticmethod
+    def remove_knowledge_base(*, instance_id, kb_id) -> bool:
+        deleted, _ = RAGInstanceKnowledgeBase.objects.filter(
+            rag_instance_id=instance_id,
+            knowledge_base_id=kb_id,
+        ).delete()
+        return deleted > 0
+
+    @staticmethod
     def assign_skill(*, instance_id, skill_id, config_override: dict | None = None):
         return RAGInstanceSkill.objects.create(
             rag_instance_id=instance_id,

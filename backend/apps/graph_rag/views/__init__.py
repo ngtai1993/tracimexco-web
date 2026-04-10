@@ -4,6 +4,7 @@ from apps.graph_rag.views.instance_views import (
     RAGInstanceConfigView,
     RAGInstanceCloneView,
     RAGInstanceKBView,
+    RAGInstanceKBRemoveView,
     RAGInstanceSkillView,
 )
 from apps.graph_rag.views.kb_views import (

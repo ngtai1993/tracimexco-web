@@ -93,7 +93,9 @@ export interface Document {
   id: string
   title: string
   description: string
-  source_type: 'file' | 'text' | 'url'
+  source_type: 'file' | 'text' | 'url' | 'file_upload' | 'image_upload' | 'api'
+  source_url: string
+  content_text: string
   is_image: boolean
   image_caption: string
   image_tags: string[]

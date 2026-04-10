@@ -45,6 +45,8 @@ export const ragApi = {
     apiClient.get<ApiResponse<InstanceKBAssignment[]>>(`${INST}/${slug}/knowledge-bases/`),
   assignKB: (slug: string, data: { knowledge_base_id: string; priority: number }) =>
     apiClient.post(`${INST}/${slug}/knowledge-bases/`, data),
+  removeKBFromInstance: (slug: string, kbId: string) =>
+    apiClient.delete(`${INST}/${slug}/knowledge-bases/${kbId}/`),
   listInstanceSkills: (slug: string) =>
     apiClient.get<ApiResponse<InstanceSkillAssignment[]>>(`${INST}/${slug}/skills/`),
   assignSkill: (slug: string, data: { skill_id: string; config_override?: Record<string, unknown> }) =>

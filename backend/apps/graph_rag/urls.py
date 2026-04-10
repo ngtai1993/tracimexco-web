@@ -5,6 +5,7 @@ from apps.graph_rag.views import (
     RAGInstanceConfigView,
     RAGInstanceCloneView,
     RAGInstanceKBView,
+    RAGInstanceKBRemoveView,
     RAGInstanceSkillView,
     KnowledgeBaseListCreateView,
     KnowledgeBaseDetailView,
@@ -55,6 +56,11 @@ urlpatterns = [
         "instances/<slug:slug>/knowledge-bases/",
         RAGInstanceKBView.as_view(),
         name="instance-kb",
+    ),
+    path(
+        "instances/<slug:slug>/knowledge-bases/<uuid:kb_id>/",
+        RAGInstanceKBRemoveView.as_view(),
+        name="instance-kb-remove",
     ),
     path(
         "instances/<slug:slug>/skills/",
