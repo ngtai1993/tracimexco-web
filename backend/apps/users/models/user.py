@@ -47,5 +47,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         db_table = "users"
         ordering = ["-date_joined"]
 
+    def get_full_name(self):
+        return self.full_name or self.email
+
     def __str__(self):
         return self.email

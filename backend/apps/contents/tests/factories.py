@@ -175,6 +175,9 @@ class AIContentGenerationFactory(DjangoModelFactory):
     class Meta:
         model = AIContentGeneration
 
+    rag_instance = factory.SubFactory(
+        "apps.graph_rag.tests.factories.RAGInstanceFactory"
+    )
     created_by = factory.SubFactory(UserFactory)
     generation_type = GenerationType.FULL_POST
     prompt = "Test prompt for generating content."

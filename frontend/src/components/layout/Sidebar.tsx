@@ -8,6 +8,7 @@ import {
   Bot,
   Brain,
   MessageSquare,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -16,6 +17,7 @@ const navItems = [
   { href: '/dashboard/agents', label: 'AI Providers', icon: Bot },
   { href: '/dashboard/rag', label: 'RAG System', icon: Brain },
   { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
+  { href: '/dashboard/contents', label: 'Contents', icon: FileText },
   { href: '/dashboard/appearance', label: 'Appearance', icon: Palette },
   { href: '/profile', label: 'Hồ sơ', icon: User },
   { href: '/settings', label: 'Cài đặt', icon: Settings },
