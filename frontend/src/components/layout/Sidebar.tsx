@@ -5,13 +5,19 @@ import {
   LogOut,
   Settings,
   Palette,
+  Bot,
+  Brain,
+  MessageSquare,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/profile', label: 'Hồ sơ', icon: User },
+  { href: '/dashboard/agents', label: 'AI Providers', icon: Bot },
+  { href: '/dashboard/rag', label: 'RAG System', icon: Brain },
+  { href: '/dashboard/chat', label: 'Chat', icon: MessageSquare },
   { href: '/dashboard/appearance', label: 'Appearance', icon: Palette },
+  { href: '/profile', label: 'Hồ sơ', icon: User },
   { href: '/settings', label: 'Cài đặt', icon: Settings },
 ]
 
