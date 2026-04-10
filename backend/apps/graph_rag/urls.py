@@ -7,6 +7,9 @@ from apps.graph_rag.views import (
     RAGInstanceKBView,
     RAGInstanceKBRemoveView,
     RAGInstanceSkillView,
+    RAGInstanceSkillRemoveView,
+    RAGSkillListCreateView,
+    RAGSkillDetailView,
     KnowledgeBaseListCreateView,
     KnowledgeBaseDetailView,
     DocumentListView,
@@ -66,6 +69,22 @@ urlpatterns = [
         "instances/<slug:slug>/skills/",
         RAGInstanceSkillView.as_view(),
         name="instance-skills",
+    ),
+    path(
+        "instances/<slug:slug>/skills/<uuid:skill_id>/",
+        RAGInstanceSkillRemoveView.as_view(),
+        name="instance-skill-remove",
+    ),
+    # ── Skills ──────────────────────────────────────
+    path(
+        "skills/",
+        RAGSkillListCreateView.as_view(),
+        name="skill-list-create",
+    ),
+    path(
+        "skills/<uuid:pk>/",
+        RAGSkillDetailView.as_view(),
+        name="skill-detail",
     ),
     # ── Knowledge Bases ─────────────────────────────
     path(

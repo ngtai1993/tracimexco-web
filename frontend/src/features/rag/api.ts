@@ -15,11 +15,14 @@ import type {
   ConfigHistory,
   InstanceKBAssignment,
   InstanceSkillAssignment,
+  RAGSkill,
+  RAGSkillInput,
 } from './types'
 
 const INST = '/api/v1/graph-rag/instances'
 const KB = '/api/v1/graph-rag/knowledge-bases'
 const DOC = '/api/v1/graph-rag/documents'
+const SKILL = '/api/v1/graph-rag/skills'
 
 export const ragApi = {
   // ── Instances ────────────────────────────────────────
@@ -51,6 +54,16 @@ export const ragApi = {
     apiClient.get<ApiResponse<InstanceSkillAssignment[]>>(`${INST}/${slug}/skills/`),
   assignSkill: (slug: string, data: { skill_id: string; config_override?: Record<string, unknown> }) =>
     apiClient.post(`${INST}/${slug}/skills/`, data),
+  removeSkillFromInstance: (slug: string, skillId: string) =>
+    apiClient.delete(`${INST}/${slug}/skills/${skillId}/`),
+  listSkills: () =>
+    apiClient.get<ApiResponse<RAGSkill[]>>(`${SKILL}/`),
+  createSkill: (data: RAGSkillInput) =>
+    apiClient.post<ApiResponse<RAGSkill>>(`${SKILL}/`, data),
+  updateSkill: (skillId: string, data: Partial<RAGSkillInput>) =>
+    apiClient.patch<ApiResponse<RAGSkill>>(`${SKILL}/${skillId}/`, data),
+  deleteSkill: (skillId: string) =>
+    apiClient.delete(`${SKILL}/${skillId}/`),
 
   // ── Knowledge Bases ─────────────────────────────────
   listKBs: (includeInactive = false) =>

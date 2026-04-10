@@ -6,6 +6,12 @@ from apps.graph_rag.views.instance_views import (
     RAGInstanceKBView,
     RAGInstanceKBRemoveView,
     RAGInstanceSkillView,
+    RAGInstanceSkillRemoveView,
+    RAGSkillListView,
+)
+from apps.graph_rag.views.skill_views import (
+    RAGSkillListCreateView,
+    RAGSkillDetailView,
 )
 from apps.graph_rag.views.kb_views import (
     KnowledgeBaseListCreateView,
@@ -42,6 +48,10 @@ __all__ = [
     "RAGInstanceCloneView",
     "RAGInstanceKBView",
     "RAGInstanceSkillView",
+    "RAGInstanceSkillRemoveView",
+    "RAGSkillListView",
+    "RAGSkillListCreateView",
+    "RAGSkillDetailView",
     "KnowledgeBaseListCreateView",
     "KnowledgeBaseDetailView",
     "DocumentListView",

@@ -190,6 +190,27 @@ export interface RAGSkill {
   slug: string
   description: string
   skill_type: string
+  config: Record<string, unknown>
+  input_schema?: Record<string, unknown>
+  output_schema?: Record<string, unknown>
+  implementation_path?: string
+  api_endpoint?: string
+  api_method?: string
   is_active: boolean
   created_at: string
+}
+
+export interface RAGSkillInput {
+  name: string
+  slug: string
+  description: string
+  skill_type: 'builtin' | 'api_call' | 'custom'
+  config?: Record<string, unknown>
+  input_schema?: Record<string, unknown>
+  output_schema?: Record<string, unknown>
+  implementation_path?: string
+  api_endpoint?: string
+  api_method?: string
+  api_headers?: Record<string, unknown>
+  is_active?: boolean
 }

@@ -11,6 +11,9 @@ urlpatterns = [
     path("api/v1/agents/", include("apps.agents.urls", namespace="agents")),
     path("api/v1/appearance/", include("apps.appearance.urls", namespace="appearance")),
     path("api/v1/graph-rag/", include("apps.graph_rag.urls", namespace="graph_rag")),
+    path("api/v1/contents/", include("apps.contents.urls", namespace="contents")),
+    path("api/v1/platforms/", include("apps.platforms.urls", namespace="platforms")),
+    path("api/v1/scheduling/", include("apps.scheduling.urls", namespace="scheduling")),
 ]
 
 if settings.DEBUG:

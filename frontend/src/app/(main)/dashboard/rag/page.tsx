@@ -1,22 +1,29 @@
 'use client'
 import { useState } from 'react'
-import { Plus, Database, Brain } from 'lucide-react'
+import { Plus, Database, Brain, Cpu } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Tabs } from '@/components/ui/Tabs'
 import { SkeletonCard } from '@/components/ui/Skeleton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
-import { InstanceCard, InstanceForm, KBCard, KBForm } from '@/features/rag'
-import { useInstances, useKnowledgeBases } from '@/features/rag/hooks'
+import { InstanceCard, InstanceForm, KBCard, KBForm, SkillCard, SkillForm } from '@/features/rag'
+import { useInstances, useKnowledgeBases, useSkills, useDeleteSkill } from '@/features/rag/hooks'
+import type { RAGSkill } from '@/features/rag/types'
 
 export default function RAGOverviewPage() {
   const [tab, setTab] = useState('instances')
   const { instances, loading: instLoading, refetch: refetchInst } = useInstances(true)
   const { kbs, loading: kbLoading, refetch: refetchKB } = useKnowledgeBases(true)
+  const { skills, loading: skillLoading, refetch: refetchSkills } = useSkills()
   const [showCreateInst, setShowCreateInst] = useState(false)
   const [showCreateKB, setShowCreateKB] = useState(false)
+  const [showCreateSkill, setShowCreateSkill] = useState(false)
+  const [editingSkill, setEditingSkill] = useState<RAGSkill | null>(null)
+  const [deletingSkill, setDeletingSkill] = useState<RAGSkill | null>(null)
+  const { remove: removeSkill, loading: deleteLoading } = useDeleteSkill()
   const { toasts, addToast, removeToast } = useToast()
 
   return (
@@ -39,6 +46,11 @@ export default function RAGOverviewPage() {
               <Plus size={16} /> Tạo KB
             </Button>
           )}
+          {tab === 'skills' && (
+            <Button size="sm" onClick={() => setShowCreateSkill(true)}>
+              <Plus size={16} /> Tạo Skill
+            </Button>
+          )}
         </div>
       </div>
 
@@ -46,6 +58,7 @@ export default function RAGOverviewPage() {
         tabs={[
           { key: 'instances', label: 'RAG Instances', icon: <Brain size={14} /> },
           { key: 'kbs', label: 'Knowledge Bases', icon: <Database size={14} /> },
+          { key: 'skills', label: 'Skills', icon: <Cpu size={14} /> },
         ]}
         active={tab}
         onChange={setTab}
@@ -98,6 +111,34 @@ export default function RAGOverviewPage() {
         )
       )}
 
+      {/* Skills Tab */}
+      {tab === 'skills' && (
+        skillLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : skills.length === 0 ? (
+          <EmptyState
+            icon={<Cpu size={40} strokeWidth={1.5} />}
+            title="Chưa có Skill nào"
+            description="Tạo skill để mở rộng khả năng cho RAG instances"
+            actionLabel="Tạo Skill"
+            onAction={() => setShowCreateSkill(true)}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {skills.map((skill) => (
+              <SkillCard
+                key={skill.id}
+                skill={skill}
+                onEdit={(s) => setEditingSkill(s)}
+                onDelete={(s) => setDeletingSkill(s)}
+              />
+            ))}
+          </div>
+        )
+      )}
+
       {/* Create Instance Modal */}
       <Modal open={showCreateInst} onClose={() => setShowCreateInst(false)} title="Tạo RAG Instance" className="max-w-xl">
         <InstanceForm
@@ -113,6 +154,46 @@ export default function RAGOverviewPage() {
           onCancel={() => setShowCreateKB(false)}
         />
       </Modal>
+
+      {/* Create Skill Modal */}
+      <Modal open={showCreateSkill} onClose={() => setShowCreateSkill(false)} title="Tạo Skill" className="max-w-2xl">
+        <SkillForm
+          onSuccess={() => { setShowCreateSkill(false); refetchSkills(); addToast('Đã tạo skill', 'success') }}
+          onCancel={() => setShowCreateSkill(false)}
+        />
+      </Modal>
+
+      {/* Edit Skill Modal */}
+      <Modal open={!!editingSkill} onClose={() => setEditingSkill(null)} title="Chỉnh sửa Skill" className="max-w-2xl">
+        {editingSkill && (
+          <SkillForm
+            skill={editingSkill}
+            onSuccess={() => { setEditingSkill(null); refetchSkills(); addToast('Đã cập nhật skill', 'success') }}
+            onCancel={() => setEditingSkill(null)}
+          />
+        )}
+      </Modal>
+
+      {/* Delete Skill Confirm */}
+      <ConfirmDialog
+        open={!!deletingSkill}
+        onClose={() => setDeletingSkill(null)}
+        title="Xóa Skill"
+        message={`Bạn có chắc muốn xóa skill "${deletingSkill?.name}"? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xóa"
+        loading={deleteLoading}
+        onConfirm={async () => {
+          if (!deletingSkill) return
+          const ok = await removeSkill(deletingSkill.id)
+          if (ok) {
+            setDeletingSkill(null)
+            refetchSkills()
+            addToast('Đã xóa skill', 'success')
+          } else {
+            addToast('Xóa skill thất bại', 'danger')
+          }
+        }}
+      />
     </>
   )
 }

@@ -157,6 +157,14 @@ class RAGInstanceService:
         )
 
     @staticmethod
+    def remove_skill(*, instance_id, skill_id) -> bool:
+        deleted, _ = RAGInstanceSkill.objects.filter(
+            rag_instance_id=instance_id,
+            skill_id=skill_id,
+        ).delete()
+        return deleted > 0
+
+    @staticmethod
     def soft_delete(instance_id) -> None:
         """Soft delete instance + cascade assignments."""
         with transaction.atomic():

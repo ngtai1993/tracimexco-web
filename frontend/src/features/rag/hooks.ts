@@ -16,6 +16,8 @@ import type {
   ConfigHistory,
   InstanceKBAssignment,
   InstanceSkillAssignment,
+  RAGSkill,
+  RAGSkillInput,
 } from './types'
 
 function extractError(err: unknown): string {
@@ -265,6 +267,91 @@ export function useAssignSkill() {
   }, [])
 
   return { assign, loading, error }
+}
+
+export function useSkills() {
+  const [skills, setSkills] = useState<RAGSkill[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetch = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await ragApi.listSkills()
+      setSkills(res.data.data)
+    } catch (err) {
+      setError(extractError(err))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { fetch() }, [fetch])
+  return { skills, loading, error, refetch: fetch }
+}
+
+export function useCreateSkill() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const create = useCallback(async (data: RAGSkillInput) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await ragApi.createSkill(data)
+      return res.data.data
+    } catch (err) {
+      setError(extractError(err))
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  return { create, loading, error }
+}
+
+export function useUpdateSkill() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const update = useCallback(async (skillId: string, data: Partial<RAGSkillInput>) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await ragApi.updateSkill(skillId, data)
+      return res.data.data
+    } catch (err) {
+      setError(extractError(err))
+      return null
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  return { update, loading, error }
+}
+
+export function useDeleteSkill() {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const remove = useCallback(async (skillId: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      await ragApi.deleteSkill(skillId)
+      return true
+    } catch (err) {
+      setError(extractError(err))
+      return false
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  return { remove, loading, error }
 }
 
 // ── Knowledge Bases ────────────────────────────────────

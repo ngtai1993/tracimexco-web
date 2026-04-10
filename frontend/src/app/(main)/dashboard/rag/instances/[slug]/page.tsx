@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Pencil, Trash2, Copy, Settings2, Database, Shield, BarChart3, Plus, X, ExternalLink, ArrowUpDown } from 'lucide-react'
+import { Pencil, Trash2, Copy, Settings2, Database, Shield, BarChart3, Plus, X, ExternalLink, ArrowUpDown, Zap, ToggleLeft, ToggleRight } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -12,11 +12,11 @@ import { StatusBadge } from '@/components/ui/StatusBadge'
 import { SkeletonCard, SkeletonTable } from '@/components/ui/Skeleton'
 import { ToastContainer } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
-import { InstanceForm, ConfigPanel, AnalyticsDashboard, UsageLogTable, AccessTable, AccessGrantForm } from '@/features/rag'
-import { useInstance, useDeleteInstance, useCloneInstance, useInstanceKBs, useAssignKB, useKnowledgeBases } from '@/features/rag/hooks'
+import { InstanceForm, ConfigPanel, AnalyticsDashboard, UsageLogTable, AccessTable, AccessGrantForm, SkillForm } from '@/features/rag'
+import { useInstance, useDeleteInstance, useCloneInstance, useInstanceKBs, useAssignKB, useKnowledgeBases, useInstanceSkills, useAssignSkill, useSkills } from '@/features/rag/hooks'
 import { ragApi } from '@/features/rag/api'
 import { Select } from '@/components/ui/Select'
-import type { InstanceKBAssignment } from '@/features/rag/types'
+import type { InstanceKBAssignment, InstanceSkillAssignment } from '@/features/rag/types'
 
 // ── Inline KB management panel ────────────────────────────────────────────────
 function InstanceKBsPanel({ instanceSlug, onToast }: { instanceSlug: string; onToast: (m: string, v: 'success' | 'danger') => void }) {
@@ -170,6 +170,162 @@ function InstanceKBsPanel({ instanceSlug, onToast }: { instanceSlug: string; onT
   )
 }
 
+// ── Inline Skills management panel ────────────────────────────────────────────
+const SKILL_TYPE_LABELS: Record<string, string> = {
+  builtin: 'Built-in',
+  api_call: 'API Call',
+  custom: 'Custom',
+}
+
+function InstanceSkillsPanel({ instanceSlug, onToast }: { instanceSlug: string; onToast: (m: string, v: 'success' | 'danger') => void }) {
+  const { assignments, loading, error, refetch } = useInstanceSkills(instanceSlug)
+  const { assign, loading: assigning } = useAssignSkill()
+  const { skills, refetch: refetchSkills } = useSkills()
+
+  const [selectedSkillId, setSelectedSkillId] = useState('')
+  const [removing, setRemoving] = useState<string | null>(null)
+  const [showCreateSkill, setShowCreateSkill] = useState(false)
+
+  const assignedIds = new Set(assignments.map((a) => a.skill.id))
+  const availableSkills = skills.filter((s) => !assignedIds.has(s.id))
+
+  const handleAssign = useCallback(async () => {
+    if (!selectedSkillId) return
+    const ok = await assign(instanceSlug, { skill_id: selectedSkillId })
+    if (ok) {
+      onToast('Đã gán Skill', 'success')
+      setSelectedSkillId('')
+      refetch()
+    } else {
+      onToast('Gán Skill thất bại', 'danger')
+    }
+  }, [assign, instanceSlug, selectedSkillId, onToast, refetch])
+
+  const handleRemove = useCallback(async (skillId: string) => {
+    setRemoving(skillId)
+    try {
+      await ragApi.removeSkillFromInstance(instanceSlug, skillId)
+      onToast('Đã gỡ Skill', 'success')
+      refetch()
+    } catch {
+      onToast('Gỡ Skill thất bại', 'danger')
+    } finally {
+      setRemoving(null)
+    }
+  }, [instanceSlug, onToast, refetch])
+
+  if (loading) return <SkeletonTable rows={3} />
+  if (error) return <p className="text-sm text-danger py-4">{error}</p>
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onClick={() => setShowCreateSkill(true)}>
+          <Plus size={14} /> Tạo Skill
+        </Button>
+      </div>
+
+      {/* Assign form */}
+      {availableSkills.length > 0 && (
+        <div className="flex items-end gap-3 p-4 bg-surface border border-border rounded-bento">
+          <div className="flex-1">
+            <Select
+              label="Thêm Skill"
+              value={selectedSkillId}
+              onChange={(e) => setSelectedSkillId(e.target.value)}
+              placeholder="Chọn skill để gán..."
+              options={availableSkills.map((s) => ({ value: s.id, label: `${s.name} (${SKILL_TYPE_LABELS[s.skill_type] ?? s.skill_type})` }))}
+            />
+          </div>
+          <Button
+            size="sm"
+            onClick={handleAssign}
+            loading={assigning}
+            disabled={!selectedSkillId}
+            className="mb-0.5"
+          >
+            <Plus size={14} /> Gán
+          </Button>
+        </div>
+      )}
+
+      {/* Assigned list */}
+      {assignments.length === 0 ? (
+        <div className="text-center py-12 text-fg-muted text-sm border border-dashed border-border rounded-bento">
+          <Zap size={32} strokeWidth={1.5} className="mx-auto mb-2 text-fg-subtle" />
+          Chưa gán Skill nào. Thêm skill để instance có thêm khả năng xử lý.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {assignments.map((assignment: InstanceSkillAssignment) => {
+            const sk = assignment.skill
+            return (
+              <div
+                key={sk.id}
+                className="flex items-center justify-between p-4 bg-card border border-border rounded-bento hover:border-primary/30 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <Zap size={13} className="text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-fg text-sm">{sk.name}</p>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-border/50 text-fg-muted font-mono">
+                        {SKILL_TYPE_LABELS[sk.skill_type] ?? sk.skill_type}
+                      </span>
+                    </div>
+                    {sk.description && (
+                      <p className="text-xs text-fg-muted truncate max-w-xs mt-0.5">{sk.description}</p>
+                    )}
+                    <div className="flex items-center gap-2 mt-1 text-[11px] text-fg-subtle">
+                      {assignment.is_enabled ? (
+                        <span className="flex items-center gap-1 text-success">
+                          <ToggleRight size={12} /> Đang bật
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-fg-muted">
+                          <ToggleLeft size={12} /> Đang tắt
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={() => handleRemove(sk.id)}
+                    disabled={removing === sk.id}
+                    className="p-1.5 rounded hover:bg-danger/10 text-fg-muted hover:text-danger transition-colors disabled:opacity-40"
+                    title="Gỡ khỏi instance"
+                  >
+                    {removing === sk.id ? (
+                      <span className="block w-3.5 h-3.5 border-2 border-danger/50 border-t-danger rounded-full animate-spin" />
+                    ) : (
+                      <X size={14} />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <Modal open={showCreateSkill} onClose={() => setShowCreateSkill(false)} title="Tạo Skill" className="max-w-2xl">
+        <SkillForm
+          onSuccess={() => {
+            setShowCreateSkill(false)
+            refetchSkills()
+            refetch()
+            onToast('Đã tạo skill', 'success')
+          }}
+          onCancel={() => setShowCreateSkill(false)}
+        />
+      </Modal>
+    </div>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function InstanceDetailPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -258,6 +414,7 @@ export default function InstanceDetailPage() {
         tabs={[
           { key: 'config', label: 'Cấu hình', icon: <Settings2 size={14} /> },
           { key: 'kbs', label: 'Knowledge Bases', icon: <Database size={14} /> },
+          { key: 'skills', label: 'Skills', icon: <Zap size={14} /> },
           { key: 'access', label: 'Quyền truy cập', icon: <Shield size={14} /> },
           { key: 'analytics', label: 'Analytics', icon: <BarChart3 size={14} /> },
         ]}
@@ -276,6 +433,10 @@ export default function InstanceDetailPage() {
 
       {activeTab === 'kbs' && (
         <InstanceKBsPanel instanceSlug={slug} onToast={addToast} />
+      )}
+
+      {activeTab === 'skills' && (
+        <InstanceSkillsPanel instanceSlug={slug} onToast={addToast} />
       )}
 
       {activeTab === 'access' && (

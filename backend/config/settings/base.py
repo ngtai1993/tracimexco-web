@@ -33,6 +33,9 @@ LOCAL_APPS = [
     "apps.agents.apps.AgentsConfig",
     "apps.appearance.apps.AppearanceConfig",
     "apps.graph_rag.apps.GraphRagConfig",
+    "apps.contents.apps.ContentsConfig",
+    "apps.platforms.apps.PlatformsConfig",
+    "apps.scheduling.apps.SchedulingConfig",
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

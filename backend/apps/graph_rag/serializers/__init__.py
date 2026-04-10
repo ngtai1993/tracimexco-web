@@ -27,6 +27,7 @@ from apps.graph_rag.serializers.access_serializer import (
     AccessPermissionOutputSerializer,
 )
 from apps.graph_rag.serializers.skill_serializer import (
+    RAGSkillWriteSerializer,
     RAGSkillOutputSerializer,
 )
 from apps.graph_rag.serializers.analytics_serializer import (
@@ -56,6 +57,7 @@ __all__ = [
     "GrantAccessSerializer",
     "AccessPermissionOutputSerializer",
     "RAGSkillOutputSerializer",
+    "RAGSkillWriteSerializer",
     "UsageLogOutputSerializer",
     "ConfigHistoryOutputSerializer",
 ]

@@ -259,3 +259,38 @@ class RAGInstanceSkillView(APIView):
             {"data": None, "message": "Skill đã được gán", "errors": None},
             status=status.HTTP_201_CREATED,
         )
+
+
+class RAGInstanceSkillRemoveView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def delete(self, request, slug, skill_id):
+        try:
+            instance = RAGSelector.get_instance_by_slug(slug)
+        except RAGInstanceNotFound as e:
+            return Response(
+                {"data": None, "message": str(e), "errors": None},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        removed = RAGInstanceService.remove_skill(
+            instance_id=instance.id,
+            skill_id=skill_id,
+        )
+        if not removed:
+            return Response(
+                {"data": None, "message": "Skill không được gán cho instance này", "errors": None},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class RAGSkillListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        from apps.graph_rag.serializers import RAGSkillOutputSerializer
+
+        skills = RAGSelector.list_skills()
+        return Response(
+            {"data": RAGSkillOutputSerializer(skills, many=True).data, "message": "success", "errors": None}
+        )

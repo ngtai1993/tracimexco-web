@@ -17,6 +17,7 @@ export type {
   InstanceKBAssignment,
   InstanceSkillAssignment,
   RAGSkill,
+  RAGSkillInput,
 } from './types'
 
 // API
@@ -35,6 +36,10 @@ export {
   useAssignKB,
   useInstanceSkills,
   useAssignSkill,
+  useSkills,
+  useCreateSkill,
+  useUpdateSkill,
+  useDeleteSkill,
   useKnowledgeBases,
   useKnowledgeBase,
   useCreateKB,
@@ -70,3 +75,5 @@ export { AccessGrantForm } from './components/AccessGrantForm'
 export { AnalyticsDashboard } from './components/AnalyticsDashboard'
 export { UsageLogTable } from './components/UsageLogTable'
 export { GraphStatusCard } from './components/GraphStatusCard'
+export { SkillCard } from './components/SkillCard'
+export { SkillForm } from './components/SkillForm'
